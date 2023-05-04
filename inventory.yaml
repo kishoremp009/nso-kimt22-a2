@@ -1,0 +1,7 @@
+[HAproxy]
+HAproxy ansible_host=<HAproxy private IP> ansible_user=ubuntu
+
+[webservers]
+devA ansible_host=<devA private IP> ansible_user=ubuntu
+devB ansible_host=<devB private IP> ansible_user=ubuntu
+devC ansible_host=<devC private IP> ansible_user=ubuntu
