@@ -10,8 +10,8 @@
         repo: "{{ repo_url }}"
         dest: "{{ dest_dir }}"
   vars:
-    ssh_config_path: "/path/to/ssh_config"
-    ssh_key_path: "/path/to/ssh_key"
+    ssh_config_path: "/sshConfig.config"
+    ssh_key_path: "/id_rsa"
   tasks:
     - name: Copy SSH configuration file
       copy:
