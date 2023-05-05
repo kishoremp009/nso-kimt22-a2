@@ -23,4 +23,42 @@
         mode: '0600'
     - name: Add SSH key to agent
       shell: ssh-add {{ ssh_key_path }} 
+ - name: Configure SSH to use bastion server and other web servers
+- hosts: all
+  gather_facts: false
+  vars:
+    bastion_host: 89.42.141.251
+    bastion_user: ubuntu
+    ssh_key_path: bkey
+    remote_user: ubuntu
+  tasks:
+    - name: Configure SSH to use bastion server
+      lineinfile:
+        path: "{{ lookup('env', 'HOME') }}/.ssh/config"
+        create: yes
+        line: |
+          Host {{ bastion_host }}
+          HostName {{ bastion_host }}
+          User {{ bastion_user }}
+          IdentityFile {{ ssh_key_path }}
+          ForwardAgent yes
+      when: inventory_hostname == 'bastionNSO'
+    - name: Configure SSH to use web servers via bastion
+      lineinfile:
+        path: "{{ lookup('env', 'HOME') }}/.ssh/config"
+        create: yes
+        line: |
+          Host {{ inventory_hostname }}
+          HostName {{ hostvars[inventory_hostname]['ansible_host'] }}
+          User {{ remote_user }}
+          ProxyCommand ssh -W %h:%p {{ bastion_user }}@{{ bastion_host }}
+          IdentityFile {{ ssh_key_path }}
+      when: inventory_hostname != 'bastionNSO'
+    - name: Set permissions on SSH key file
+      file:
+        path: "{{ ssh_key_path }}"
+        mode: '0600'
+    - name: Add SSH key to agent
+      shell: ssh-add {{ ssh_key_path }}
+ 
        
