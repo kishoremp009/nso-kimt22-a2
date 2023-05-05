@@ -1,0 +1,49 @@
+
+- name: Deploy HAproxy and Flask app
+  hosts: webservers
+  become: yes
+  vars:
+    flask_app_path: "/opt/flask_app"
+    haproxy_cfg_path: "/etc/haproxy/haproxy.cfg"
+  tasks:
+    - name: Install required packages
+      apt:
+        name:
+          - haproxy
+          - python3-pip
+          - python3-venv
+        state: present
+      become: yes
+    - name: Create a virtual environment for Flask app
+      command: python3 -m venv "{{ flask_app_path }}/venv"
+    - name: Install Flask in the virtual environment
+      pip:
+        name: Flask
+        virtualenv: "{{ flask_app_path }}/venv"
+    - name: Copy Flask app files
+      copy:
+        src: "devApp.py"
+        dest: "{{ flask_app_path }}/devApp.py"
+    - name: Configure HAproxy
+      copy:
+        src: "haproxy.cfg"
+        dest: "{{ haproxy_cfg_path }}"
+      notify: restart haproxy
+    - name: Start Flask app
+      shell: |
+        cd "{{ flask_app_path }}"
+        nohup venv/bin/python3 devApp.py > /dev/null 2>&1 &
+  handlers:
+    - name: restart haproxy
+      service:
+        name: haproxy
+        state: restarted
+- name: Test app
+  uri:
+    url: "http://{{ haproxy_public_ip }}/"
+    method: GET
+    return_content: yes
+  register: result
+  until: result.status == 200 and result.content | count('devA') == 1 and result.content | count('devB') == 1 and result.content | count('devC') == 1
+  retries: 3
+  delay: 5
