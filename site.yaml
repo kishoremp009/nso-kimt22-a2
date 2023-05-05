@@ -68,7 +68,7 @@
   tasks:
     - name: Test haproxy
       uri:
-        url: "http://{{ hostvars[item]['ansible_default_ipv4']['address']
+        url: "http://{{ hostvars[item]['ansible_default_ipv4']['address'] 
 }}:5432/"
         method: GET
         status_code: 200
@@ -82,4 +82,3 @@
     service:
       name: haproxy
       state: restarted
-
