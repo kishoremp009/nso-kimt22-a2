@@ -9,4 +9,18 @@
       git:
         repo: "{{ repo_url }}"
         dest: "{{ dest_dir }}"
-        
+  vars:
+    ssh_config_path: "/path/to/ssh_config"
+    ssh_key_path: "/path/to/ssh_key"
+  tasks:
+    - name: Copy SSH configuration file
+      copy:
+        src: "{{ ssh_config_path }}"
+        dest: "{{ lookup('env', 'HOME') }}/.ssh/config"
+    - name: Set permissions on SSH key file
+      file:
+        path: "{{ ssh_key_path }}"
+        mode: '0600'
+    - name: Add SSH key to agent
+      shell: ssh-add {{ ssh_key_path }} 
+       
