@@ -1,63 +1,12 @@
-
-- name: Deploy HAproxy and Flask app
-  hosts: webservers
-  become: yes
+---
+- hosts: localhost
+  gather_facts: false
   vars:
-    flask_app_path: "/opt/flask_app"
-    haproxy_cfg_path: "/etc/haproxy/haproxy.cfg"
+    repo_url: "https://github.com/<username>/<repository>.git"
+    dest_dir: "/path/to/destination/directory"
   tasks:
-    - name: Install required packages
-      apt:
-        name:
-          - haproxy
-          - python3-pip
-          - python3-venv
-        state: present
-      become: yes
-    - name: Create a virtual environment for Flask app
-      command: python3 -m venv "{{ flask_app_path }}/venv"
-    - name: Install Flask in the virtual environment
-      pip:
-        name: Flask
-        virtualenv: "{{ flask_app_path }}/venv"
-    - name: Copy Flask app files
-      copy:
-        src: "devApp.py"
-        dest: "{{ flask_app_path }}/devApp.py"
-    - name: Configure HAproxy
-      copy:
-        src: "haproxy.cfg"
-        dest: "{{ haproxy_cfg_path }}"
-      notify: restart haproxy
-    - name: Start Flask app
-      shell: |
-        cd "{{ flask_app_path }}"
-        nohup venv/bin/python3 devApp.py > /dev/null 2>&1 &
-  handlers:
-    - name: restart haproxy
-      service:
-        name: haproxy
-        state: restarted
-- name: Test app
-  hosts: HAproxy
-  gather_facts: no
-
-  tasks:
-    - name: Send requests
-      uri:
-        url: http://{{ item }}/time
-        method: GET
-        return_content: yes
-      register: result
-      with_items:
-        - devA
-        - devB
-        - devC
-
-    - name: Verify response
-      assert:
-        that:
-          - result|length == 3
-          - "'devA' in result.content"
-          - "'devB' in result.content"
-          - "'devC' in result.content"
+    - name: Clone the GitHub repository
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ dest_dir }}"
+        
