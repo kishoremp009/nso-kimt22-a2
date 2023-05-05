@@ -1,64 +1,83 @@
 ---
-- hosts: localhost
-  gather_facts: false
-  vars:
-    repo_url: "https://github.com/kishoremp009/nso-kimt22-a2.git"
-    dest_dir: "/home/kishore"
+- hosts: webservers
+  become: yes
   tasks:
-    - name: Clone the GitHub repository
-      git:
-        repo: "{{ repo_url }}"
-        dest: "{{ dest_dir }}"
-  vars:
-    ssh_config_path: "/sshConfig.config"
-    ssh_key_path: "/id_rsa"
+    - name: Create .ssh directory
+      file:
+        path: ~/.ssh
+        state: directory
+        mode: "0700"
+
+    - name: Add SSH key to authorized_keys
+      authorized_key:
+        user: ubuntu
+        state: present
+        key: "{{ lookup('file', '~/.ssh/bkey.pub') }}"
+# Installs and configures haproxy on the haproxy host
+- hosts: haproxy
+  become: yes
   tasks:
-    - name: Copy SSH configuration file
+    - name: Install haproxy
+      apt:
+        name: haproxy
+        state: present
+      notify: restart haproxy
+
+    - name: Configure haproxy
+      template:
+        src: haproxy.cfg
+        dest: /etc/haproxy/haproxy.cfg
+      notify: restart haproxy
+# Deploys and tests the flask app on webservers
+- hosts: webservers
+  become: yes
+  tasks:
+    - name: Install Python and Flask
+      apt:
+        name:
+          - python3
+          - python3-pip
+        state: present
+
+    - name: Copy Flask app
+      hosts: webservers
+      become: true
+  tasks:
+    - name: Create Flask app directory
+      file:
+        path: /opt/flask-app
+        state: directory
+        mode: 0755
+      changed_when: false
+      check_mode: no
+
+    - name: Copy Flask app files
       copy:
-        src: "{{ ssh_config_path }}"
-        dest: "{{ lookup('env', 'HOME') }}/.ssh/config"
-    - name: Set permissions on SSH key file
-      file:
-        path: "{{ ssh_key_path }}"
-        mode: '0600'
-    - name: Add SSH key to agent
-      shell: ssh-add {{ ssh_key_path }} 
- - name: Configure SSH to use bastion server and other web servers
-- hosts: all
-  gather_facts: false
-  vars:
-    bastion_host: 89.42.141.251
-    bastion_user: ubuntu
-    ssh_key_path: bkey
-    remote_user: ubuntu
+        src: devApp.py
+        dest: /opt/flask-app
+      notify:
+        - start flask app
+  handlers:
+   - name: start flask app
+     service:
+      name: devApp.py
+      state: started
+- hosts: haproxy
+  become: yes
   tasks:
-    - name: Configure SSH to use bastion server
-      lineinfile:
-        path: "{{ lookup('env', 'HOME') }}/.ssh/config"
-        create: yes
-        line: |
-          Host {{ bastion_host }}
-          HostName {{ bastion_host }}
-          User {{ bastion_user }}
-          IdentityFile {{ ssh_key_path }}
-          ForwardAgent yes
-      when: inventory_hostname == 'bastionNSO'
-    - name: Configure SSH to use web servers via bastion
-      lineinfile:
-        path: "{{ lookup('env', 'HOME') }}/.ssh/config"
-        create: yes
-        line: |
-          Host {{ inventory_hostname }}
-          HostName {{ hostvars[inventory_hostname]['ansible_host'] }}
-          User {{ remote_user }}
-          ProxyCommand ssh -W %h:%p {{ bastion_user }}@{{ bastion_host }}
-          IdentityFile {{ ssh_key_path }}
-      when: inventory_hostname != 'bastionNSO'
-    - name: Set permissions on SSH key file
-      file:
-        path: "{{ ssh_key_path }}"
-        mode: '0600'
-    - name: Add SSH key to agent
-      shell: ssh-add {{ ssh_key_path }}
- 
-       
+    - name: Test haproxy
+      uri:
+        url: "http://{{ hostvars[item]['ansible_default_ipv4']['address'] 
+}}:5432/"
+        method: GET
+        status_code: 200
+      with_items:
+        - devA
+        - devB
+        - devC
+
+  handlers:
+  - name: restart haproxy
+    service:
+      name: haproxy
+      state: restarted
