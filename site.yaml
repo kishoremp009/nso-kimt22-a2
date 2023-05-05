@@ -1,28 +1,5 @@
 ---
-- hosts: localhost
-  gather_facts: false
-  vars:
-    repo_url: "https://github.com/kishoremp009/nso-kimt22-a2.git"
-    dest_dir: "/home/kishore"
-  tasks:
-    - name: Clone the GitHub repository
-      git:
-        repo: "{{ repo_url }}"
-        dest: "{{ dest_dir }}"
-  vars:
-    ssh_config_path: "/sshConfig.config"
-    ssh_key_path: "/id_rsa"
-  tasks:
-    - name: Copy SSH configuration file
-      copy:
-        src: "{{ ssh_config_path }}"
-        dest: "{{ lookup('env', 'HOME') }}/.ssh/config"
-    - name: Set permissions on SSH key file
-      file:
-        path: "{{ ssh_key_path }}"
-        mode: '0600'
-    - name: Add SSH key to agent
-      shell: ssh-add {{ ssh_key_path }}
+# SSH configuration
 - hosts: webservers
   become: yes
   tasks:
@@ -91,7 +68,7 @@
   tasks:
     - name: Test haproxy
       uri:
-        url: "http://{{ hostvars[item]['ansible_default_ipv4']['address'] 
+        url: "http://{{ hostvars[item]['ansible_default_ipv4']['address']
 }}:5432/"
         method: GET
         status_code: 200
@@ -105,3 +82,4 @@
     service:
       name: haproxy
       state: restarted
+
