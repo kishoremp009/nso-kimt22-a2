@@ -39,11 +39,25 @@
         name: haproxy
         state: restarted
 - name: Test app
-  uri:
-    url: "http://{{ haproxy_public_ip }}/"
-    method: GET
-    return_content: yes
-  register: result
-  until: result.status == 200 and result.content | count('devA') == 1 and result.content | count('devB') == 1 and result.content | count('devC') == 1
-  retries: 3
-  delay: 5
+  hosts: HAproxy
+  gather_facts: no
+
+  tasks:
+    - name: Send requests
+      uri:
+        url: http://{{ item }}/time
+        method: GET
+        return_content: yes
+      register: result
+      with_items:
+        - devA
+        - devB
+        - devC
+
+    - name: Verify response
+      assert:
+        that:
+          - result|length == 3
+          - "'devA' in result.content"
+          - "'devB' in result.content"
+          - "'devC' in result.content"
