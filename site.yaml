@@ -2,8 +2,8 @@
 - hosts: localhost
   gather_facts: false
   vars:
-    repo_url: "https://github.com/<username>/<repository>.git"
-    dest_dir: "/path/to/destination/directory"
+    repo_url: "https://github.com/kishoremp009/nso-kimt22-a2.git"
+    dest_dir: "/home/kishore"
   tasks:
     - name: Clone the GitHub repository
       git:
