@@ -1,6 +1,6 @@
 ---
-#try 2
-- hosts: all
+- name: Configure HAproxy and webservers
+  hosts: all
   become: yes
   tasks:
     - name: Update and Upgrade all packages
@@ -48,8 +48,7 @@
         mode: 0644
 
     - name: execute the flask-app deployment
-      shell: gunicorn -w 2 -D -b 0.0.0.0:80 devApp:app
-
+      shell: gunicorn -w 2 -D -b 0.0.0.0:8666 devApp:app
 
   handlers:
     - name: Restart HAProxy
