@@ -1,13 +1,14 @@
-[HAproxy]
-HAproxy 
-
-[webservers]
-devA 
-devB 
-devC 
+[HAproxy]  
+HAproxy  
+ 
+[webservers]  
+devA  
+devB  
+devC  
 
 [bastionNSO]
 bastionNSO 
 
-[all:vars]
-ansible_ssh_common_args='-o ProxyJump=ubuntu@bastionNSO'
+[all:vars]  
+ansible_user=ubuntu
+ansible_ssh_common_args='-o ProxyJump=ubuntu@bastionNSO' 
