@@ -33,7 +33,7 @@ defaults
         errorfile 503 /etc/haproxy/errors/503.http
         errorfile 504 /etc/haproxy/errors/504.http
 frontend haproxynode
-    bind *:5000
+    bind *:80
     mode http
     default_backend backendnodes
 
@@ -45,5 +45,5 @@ backend backendnodes
     option httpchk HEAD / HTTP/1.1\r\nHost:localhost
 {% for dev_servers in groups['webservers'] %}
     server  {{ dev_servers }} {{ 
-hostvars[dev_servers]["ansible_default_ipv4"]["address"]}}:8080
+hostvars[dev_servers]["ansible_default_ipv4"]["address"]}}:80
    {% endfor %}
