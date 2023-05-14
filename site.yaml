@@ -1,84 +1,59 @@
 ---
-# SSH configuration
-- hosts: webservers
+#try 2
+- hosts: all
   become: yes
   tasks:
-    - name: Create .ssh directory
-      file:
-        path: ~/.ssh
-        state: directory
-        mode: "0700"
+    - name: Update and Upgrade all packages
+      apt:
+        update_cache: yes
+        upgrade: yes
+        autoremove: yes
+        autoclean: yes
 
-    - name: Add SSH key to authorized_keys
-      authorized_key:
-        user: ubuntu
-        state: present
-        key: "{{ lookup('file', '~/.ssh/bkey.pub') }}"
-# Installs and configures haproxy on the haproxy host
-- hosts: haproxy
+- hosts: HAproxy
   become: yes
   tasks:
-    - name: Install haproxy
+    - name: Install HAProxy
       apt:
         name: haproxy
         state: present
-      notify: restart haproxy
+      notify:
+        - Restart HAProxy
 
-    - name: Configure haproxy
-      template:
-        src: haproxy.cfg
-        dest: /etc/haproxy/haproxy.cfg
-      notify: restart haproxy
-# Deploys and tests the flask app on webservers
+    - name: Copy HAProxy config file
+      copy:
+        src: haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg.j2
+        mode: 0644
+      notify:
+        - Restart HAProxy
+
 - hosts: webservers
   become: yes
   tasks:
-    - name: Install Python and Flask
+    - name: Install Python3, Pip , Flask , gunicorn
       apt:
-        name:
-          - python3
-          - python3-pip
-        state: present
+        name: "{{ item }}"
+        state: latest
+      loop:
+        - python3
+        - python3-pip
+        - python3-flask
+        - gunicorn
 
-    - name: Copy Flask app
-      hosts: webservers
-      become: true
-  tasks:
-    - name: Create Flask app directory
-      file:
-        path: /opt/flask-app
-        state: directory
-        mode: 0755
-      changed_when: false
-      check_mode: no
-
-    - name: Copy Flask app files
+    - name: Copy Application to Web Servers
       copy:
         src: devApp.py
-        dest: /opt/flask-app
-      notify:
-        - start flask app
-  handlers:
-   - name: start flask app
-     service:
-      name: devApp.py
-      state: started
-- hosts: haproxy
-  become: yes
-  tasks:
-    - name: Test haproxy
-      uri:
-        url: "http://{{ hostvars[item]['ansible_default_ipv4']['address'] 
-}}:5432/"
-        method: GET
-        status_code: 200
-      with_items:
-        - devA
-        - devB
-        - devC
+        dest: /home/ubuntu/devApp.py
+        mode: 0644
+
+    - name: execute the flask-app deployment
+      shell: gunicorn -w 2 -D -b 0.0.0.0:80 devApp:app
+
 
   handlers:
-  - name: restart haproxy
-    service:
-      name: haproxy
-      state: restarted
+    - name: Restart HAProxy
+      systemd:
+        name: haproxy
+        state: restarted
+
