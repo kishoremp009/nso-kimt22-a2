@@ -48,7 +48,7 @@
         mode: 0644
 
     - name: execute the flask-app deployment
-      shell: gunicorn -w 2 -D -b 0.0.0.0:8666 devApp:app
+      shell: gunicorn -w 2 -D -b 0.0.0.0:8080 devApp:app
 
   handlers:
     - name: Restart HAProxy
