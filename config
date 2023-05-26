@@ -1,4 +1,4 @@
-Host bastionNSO
+Host bastionET2598
   User ubuntu
   HostName 188.95.227.77
   IdentityFile ~/.ssh/id_rsa
@@ -20,18 +20,18 @@ Host devA
   HostName 10.0.1.17
   StrictHostKeyChecking no
   PasswordAuthentication no
-  ProxyJump bastionNSO
+  ProxyJump bastionET2598
 
 Host devB
   User ubuntu
   HostName 10.0.1.13
   StrictHostKeyChecking no
   PasswordAuthentication no
-  ProxyJump bastionNSO
+  ProxyJump bastionET2598
 
 Host devC
   User ubuntu
   HostName 10.0.1.15
   StrictHostKeyChecking no
   PasswordAuthentication no
-  ProxyJump bastionNSO
+  ProxyJump bastionET2598
