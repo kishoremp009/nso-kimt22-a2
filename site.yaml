@@ -1,58 +1,154 @@
 ---
-- name: Configure HAproxy and webservers
-  hosts: all
+- name: Deploy HAproxy and Nginx
+  hosts: haproxy
   become: yes
+  become_method: sudo
   tasks:
-    - name: Update and Upgrade all packages
+    - name: Update APT cache
       apt:
         update_cache: yes
-        upgrade: yes
-        autoremove: yes
-        autoclean: yes
 
-- hosts: HAproxy
-  become: yes
-  tasks:
-    - name: Install HAProxy
+    - name: Install HAproxy
       apt:
         name: haproxy
-        state: present
-      notify:
-        - Restart HAProxy
-
-    - name: Copy HAProxy config file
-      copy:
-        src: haproxy.cfg.j2
-        dest: /etc/haproxy/haproxy.cfg.j2
-        mode: 0644
-      notify:
-        - Restart HAProxy
-
-- hosts: webservers
-  become: yes
-  tasks:
-    - name: Install Python3, Pip , Flask , gunicorn
-      apt:
-        name: "{{ item }}"
         state: latest
-      loop:
+
+    - name: Copy HAproxy configuration
+      template:
+        src: haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+      notify: Restart HAproxy
+
+    - name: Restart HAproxy
+      service:
+        name: haproxy
+        state: restarted
+        enabled: yes
+
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: latest
+
+    - name: Configure Nginx
+      template:
+        src: nginx.j2
+        dest: /etc/nginx/nginx.conf
+      notify: Restart Nginx
+
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
+
+- name: Configure web servers
+  hosts: webservers
+  become: yes
+  become_method: sudo
+  tasks:
+    - name: Update APT cache
+      apt:
+        update_cache: yes
+
+    - name: Install Python packages
+      apt:
+        name:
         - python3
         - python3-pip
         - python3-flask
         - gunicorn
+      state: latest
 
-    - name: Copy Application to Web Servers
+    - name: Install Flask
+      pip:
+        name: flask
+        state: latest
+
+    - name: Install snmpd
+      apt:
+        name: snmpd
+        state: latest
+
+    - name: Configure snmpd
+      template:
+        src: snmpd.conf
+        dest: /etc/snmp/snmpd.conf
+      notify: Restart SNMPd
+
+    - name: Restart SNMPd
+      service:
+        name: snmpd
+        state: restarted
+        enabled: yes
+
+    - name: Copy application file
       copy:
-        src: devApp.py
-        dest: /home/ubuntu/devApp.py
-        mode: 0644
+        src: application2.py
+        dest: /home/ubuntu/application2.py
+	  mode: 0644
 
-    - name: execute the flask-app deployment
-      shell: gunicorn -w 2 -D -b 0.0.0.0:80 devApp:app
+    - name: Start Flask app
+      shell: gunicorn -w 2 -D -b 0.0.0.0:8080 application2:app
 
   handlers:
-    - name: Restart HAProxy
-      systemd:
+    - name: Restart HAproxy
+      service:
         name: haproxy
         state: restarted
 
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
+
+    - name: Restart SNMPd
+      service:
+        name: snmpd
+        state: restarted
+        enabled: yes
+
+- name: Testing
+  hosts: HAproxy
+  become: yes
+
+  tasks:
+    - name: Testing the HAproxy load balancing 1st time.
+      shell: "curl localhost"
+      register: "output"
+      args:
+        warn: false
+    - debug: var=output.stdout
+
+    - name: Testing the HAproxy load balancing 2nd time.
+      shell: "curl localhost"
+      register: "output"
+      args:
+        warn: false
+    - debug: var=output.stdout
+
+    - name: Testing the HAproxy load balancing 3rd time.
+      shell: "curl localhost"
+      register: "output"
+      args:
+        warn: false
+    - debug: var=output.stdout
+
+    - name: Install snmpd
+      apt:
+        name: snmp
+        state: latest
+
+    - name: "Testing the SNMP 1st time"
+      shell: "snmpwalk -t 1 -r 1 -v2c -c public localhost:1611 iso.3.6.1.2.1.1.1.0"
+      register: "output"
+    - debug: var=output.stdout_lines
+
+    - name: "Testing the SNMP 2nd time"
+      shell: "snmpwalk -t 1 -r 1 -v2c -c public localhost:1611 iso.3.6.1.2.1.1.1.0"
+      register: "output"
+    - debug: var=output.stdout_lines
+
+    - name: "Testing the SNMP 3rd time"
+      shell: "snmpwalk -t 1 -r 1 -v2c -c public localhost:1611 iso.3.6.1.2.1.1.1.0"
+      register: "output"
+    - debug: var=output.stdout_lines
